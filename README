@@ -1,0 +1,9 @@
+Commands to setup backend:
+py -m pip install fastapi
+py -m pip install uvicorn
+py -m pip install yfinance
+py -m pip install pandas
+py -m pip install scikit-learn
+
+Once installed, go to command prompt and navigate to the path that has model.py. Then, run this command: uvicorn main:app --reload
+Once running, click the local host link that comes up. Then add /docs to the end of it to get to the fastAPI.

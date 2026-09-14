@@ -30,7 +30,7 @@ def fetch_data(ticker, start=None, end=None):
 def resample_data(df, interval):
     if interval == "daily":
         return df
-    rule = {"weekly": "W", "monthly": "M", "yearly": "A"}[interval]
+    rule = {"weekly": "W", "monthly": "ME", "yearly": "YE"}[interval]
     return df.resample(rule).agg({
         "Open": "first",
         "High": "max",
@@ -83,7 +83,7 @@ def predict_stock(ticker, interval, horizon=1, start=None, end=None):
 @app.get("/predict")
 def predict(ticker: str, interval: str = "daily", horizon: int = 1, start: str = None, end: str = None):
     try:
-        return predict_stock(ticker.upper(), interval, horizon, start, end)
+        return predict_stock(ticker.upper(), interval.lower(), horizon, start, end)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

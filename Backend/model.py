@@ -3,6 +3,10 @@ from sklearn.linear_model import LinearRegression
 import yfinance as yf
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 #uvicorn main:app --reload
 app = FastAPI()
 
@@ -79,6 +83,9 @@ def predict_stock(ticker, interval, horizon=1, start=None, end=None):
         "data_points_used": len(total),
     }
 
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return FileResponse("index.html")
 
 @app.get("/predict")
 def predict(ticker: str, interval: str = "daily", horizon: int = 1, start: str = None, end: str = None):

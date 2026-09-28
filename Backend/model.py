@@ -2,9 +2,12 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 import yfinance as yf
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 #uvicorn main:app --reload
 app = FastAPI()
+
 
 # Allow the React dev server to call this API
 app.add_middleware(
@@ -13,7 +16,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return FileResponse("index.html")
 
 def fetch_data(ticker, start=None, end=None):
     df = yf.download(ticker, period="max", progress=False)

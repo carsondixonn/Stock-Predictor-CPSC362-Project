@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Information</title>
+    <link rel="stylesheet" href="index.css">
 </head>
 <body>
 
@@ -13,8 +14,13 @@
         <input type="text" id="Symbol" name="Symbol"><br>
         <br>
 
-        <label for="input2">Interval</label><br>
-        <input type="text" id="Interval" name="Interval"><br>
+        <label for="Interval">Interval</label><br>
+        <select id="Interval" name="Interval">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+        </select><br>
         <br>
         
 
@@ -44,78 +50,31 @@
         </div>
         <br>
         <button type="button" onclick="showInputs()">Submit</button>
-</body>
+    </form>
 
-<script>
-    async function showInputs() {
-        const ticker  = document.getElementById("Symbol").value.trim(); //finds box and creates object
-        const interval = document.getElementById("Interval").value;
-        const horizon = document.getElementById("Horizon").value;
-        const start = document.getElementById("StartDate").value;
-        const end = document.getElementById("EndDate").value;
+    <script>
+        async function showInputs() {
+            const ticker  = document.getElementById("Symbol").value.trim(); //finds box and creates object
+            const interval = document.getElementById("Interval").value;
+            const horizon = document.getElementById("Horizon").value;
+            const start = document.getElementById("StartDate").value;
+            const end = document.getElementById("EndDate").value;
 
-        if (!ticker) {
-        document.getElementById("error").textContent = "Please enter a ticker symbol.";
-        return;
-        }
-        document.getElementById("error").textContent = ""; //resets these to default
-        document.getElementById("result").style.display = "none"; //resets these to default
-
-        const params = new URLSearchParams({ ticker, interval, horizon }); //required
-        if (start) {
-            params.append("start", start); //appended to url if added
-        }
-        if (end) {
-            params.append("end", end);  //appended to url if added
-        }
-    //sending the request - error handling
-    try {
-        const res  = await fetch(`/predict?${params}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.detail);
-        }
-
-        // 6. Display
-        document.getElementById("resTicker").textContent    = data.ticker;
-        document.getElementById("resInterval").textContent  = data.interval;
-        document.getElementById("resHorizon").textContent   = data.horizon;
-        document.getElementById("resCurrent").textContent   = data.current_price.toFixed(2);
-        document.getElementById("resPredicted").textContent = data.predicted_price.toFixed(2);
-        document.getElementById("resPoints").textContent    = data.data_points_used;
-        document.getElementById("result").style.display = "block";
-
-    } catch (err) {
-        document.getElementById("error").textContent = err.message;
-    }
-}
-</script>
-<!-- <script>
-    async function showInputs() {
-        // 1. Read
-        const ticker   = document.getElementById("Symbol").value.trim();
-        const interval = document.getElementById("Interval").value;
-        const horizon  = document.getElementById("Horizon").value;
-        const start    = document.getElementById("StartDate").value;
-        const end      = document.getElementById("EndDate").value;
-
-        // 2. Validate
-        if (!ticker) {
+            if (!ticker) {
             document.getElementById("error").textContent = "Please enter a ticker symbol.";
             return;
-        }
+            }
+            document.getElementById("error").textContent = ""; //resets these to default
+            document.getElementById("result").style.display = "none"; //resets these to default
 
-        // 3. Reset
-        document.getElementById("error").textContent = "";
-        document.getElementById("result").style.display = "none";
-
-        // 4. Build URL
-        const params = new URLSearchParams({ ticker, interval, horizon });
-        if (start) params.append("start", start);
-        if (end)   params.append("end", end);
-
-        // 5. Send + handle failure
+            const params = new URLSearchParams({ ticker, interval, horizon }); //required
+            if (start) {
+                params.append("start", start); //appended to url if added
+            }
+            if (end) {
+                params.append("end", end);  //appended to url if added
+            }
+        //sending the request - error handling
         try {
             const res  = await fetch(`/predict?${params}`);
             const data = await res.json();
@@ -128,8 +87,8 @@
             document.getElementById("resTicker").textContent    = data.ticker;
             document.getElementById("resInterval").textContent  = data.interval;
             document.getElementById("resHorizon").textContent   = data.horizon;
-            document.getElementById("resCurrent").textContent   = data.current_price;
-            document.getElementById("resPredicted").textContent = data.predicted_price;
+            document.getElementById("resCurrent").textContent   = data.current_price.toFixed(2);
+            document.getElementById("resPredicted").textContent = data.predicted_price.toFixed(2);
             document.getElementById("resPoints").textContent    = data.data_points_used;
             document.getElementById("result").style.display = "block";
 
@@ -137,4 +96,6 @@
             document.getElementById("error").textContent = err.message;
         }
     }
-</script> -->
+    </script>
+</body>
+</html>

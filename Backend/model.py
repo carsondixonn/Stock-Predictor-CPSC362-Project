@@ -8,14 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 #uvicorn main:app --reload
 app = FastAPI()
 
-
-# Allow the React dev server to call this API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 @app.get("/", response_class=HTMLResponse)
 def home():
     return FileResponse("index.html")

@@ -5,12 +5,20 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 #uvicorn main:app --reload
 app = FastAPI()
+
+BASE_DIR = Path(__file__).parent
 
 @app.get("/", response_class=HTMLResponse)
 def home():
     return FileResponse("index.html")
+
+@app.get("/index.css")
+def css():
+    return FileResponse(BASE_DIR / "index.css", media_type="text/css")
+
 
 def fetch_data(ticker, start=None, end=None):
     df = yf.download(ticker, period="max", progress=False)

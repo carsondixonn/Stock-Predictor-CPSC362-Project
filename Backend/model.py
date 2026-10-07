@@ -6,8 +6,21 @@ from fastapi.responses import HTMLResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+
+#for database
+from database import create_db_and_tables
+
+#for auth
+from auth import router as auth_router
+
 #uvicorn main:app --reload
 app = FastAPI()
+
+#for auth
+app.include_router(auth_router)
+
+#for database
+create_db_and_tables()
 
 BASE_DIR = Path(__file__).parent
 

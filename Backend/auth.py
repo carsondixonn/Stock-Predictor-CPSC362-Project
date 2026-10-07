@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 from pwdlib import PasswordHash
-
 from database import User, engine
 
 

@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Information</title>
-    <link rel="stylesheet" href="index.css">
 </head>
 <body>
-
 
     <h1>Enter Your Stock Information</h1>
 
@@ -15,88 +13,29 @@
         <input type="text" id="Symbol" name="Symbol"><br>
         <br>
 
-        <label for="Interval">Interval</label><br>
-        <select id="Interval" name="Interval">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-        </select><br>
+        <label for="input2">Input 2</label><br>
+        <input type="text" id="input2" name="input2"><br>
         <br>
         
 
-        <label for="input3">Horizon</label><br>
-        <input type="text" id="Horizon" name="Horizon"><br>
+        <label for="input3">Input 3</label><br>
+        <input type="text" id="input3" name="input3"><br>
         <br>
         
 
-        <label for="input4">Start Date</label><br>
-        <input type="text" id="StartDate" name="StartDate"><br>
+        <label for="input4">Input 4</label><br>
+        <input type="text" id="input4" name="input4"><br>
         <br>
     
 
-        <label for="input5">End Date</label><br>
-        <input type="text" id="EndDate" name="EndDate"><br>
+        <label for="input5">Input 5</label><br>
+        <input type="text" id="input5" name="input5"><br>
         <br>
-        <p id="error"></p>
 
-        <h2>Results</h2>
-        <div id="result" style="display: none;">
-            <p>Ticker: <span id="resTicker"></span></p>
-            <p>Interval: <span id="resInterval"></span></p>
-            <p>Horizon: <span id="resHorizon"></span></p>
-            <p>Current price: <span id="resCurrent"></span></p>
-            <p>Predicted price: <span id="resPredicted"></span></p>
-            <p>Data points used: <span id="resPoints"></span></p>
-        </div>
         <br>
         <button type="button" onclick="showInputs()">Submit</button>
     </form>
 
-    <script>
-        async function showInputs() {
-            const ticker  = document.getElementById("Symbol").value.trim(); //finds box and creates object
-            const interval = document.getElementById("Interval").value;
-            const horizon = document.getElementById("Horizon").value;
-            const start = document.getElementById("StartDate").value;
-            const end = document.getElementById("EndDate").value;
+    <h2>Results</h2>
 
-            if (!ticker) {
-            document.getElementById("error").textContent = "Please enter a ticker symbol.";
-            return;
-            }
-            document.getElementById("error").textContent = ""; //resets these to default
-            document.getElementById("result").style.display = "none"; //resets these to default
-
-            const params = new URLSearchParams({ ticker, interval, horizon }); //required
-            if (start) {
-                params.append("start", start); //appended to url if added
-            }
-            if (end) {
-                params.append("end", end);  //appended to url if added
-            }
-        //sending the request - error handling
-        try {
-            const res  = await fetch(`/predict?${params}`);
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.detail);
-            }
-
-            // 6. Display
-            document.getElementById("resTicker").textContent    = data.ticker;
-            document.getElementById("resInterval").textContent  = data.interval;
-            document.getElementById("resHorizon").textContent   = data.horizon;
-            document.getElementById("resCurrent").textContent   = data.current_price.toFixed(2);
-            document.getElementById("resPredicted").textContent = data.predicted_price.toFixed(2);
-            document.getElementById("resPoints").textContent    = data.data_points_used;
-            document.getElementById("result").style.display = "block";
-
-        } catch (err) {
-            document.getElementById("error").textContent = err.message;
-        }
-    }
-    </script>
 </body>
-</html>

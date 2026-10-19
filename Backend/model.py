@@ -9,15 +9,18 @@ from pathlib import Path
 
 #for database
 from database import create_db_and_tables
-
 #for auth
 from auth import router as auth_router
+#for portfolio
+from portfolio import router as portfolio_router
 
 #uvicorn main:app --reload
 app = FastAPI()
 
 #for auth
 app.include_router(auth_router)
+#for portfolio
+app.include_router(portfolio_router)
 
 #for database
 create_db_and_tables()

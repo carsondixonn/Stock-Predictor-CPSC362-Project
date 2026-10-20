@@ -22,18 +22,28 @@ app.include_router(auth_router)
 #for portfolio
 app.include_router(portfolio_router)
 
+
+
 #for database
 create_db_and_tables()
 
 BASE_DIR = Path(__file__).parent
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", include_in_schema=False)
 def home():
-    return FileResponse("index.html")
+    return FileResponse(BASE_DIR / "login.html")
+
+@app.get("/index.html", include_in_schema=False)
+def index_page():
+    return FileResponse(BASE_DIR / "index.html")
 
 @app.get("/index.css")
 def css():
     return FileResponse(BASE_DIR / "index.css", media_type="text/css")
+
+@app.get("/auth.js", include_in_schema=False)
+def auth_js():
+    return FileResponse(BASE_DIR / "auth.js", media_type="text/javascript")
 
 
 def fetch_data(ticker, start=None, end=None):

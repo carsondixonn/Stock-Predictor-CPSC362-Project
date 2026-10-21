@@ -31,6 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
     link.addEventListener("click", (e) => {
         e.preventDefault();
         clearUser();
-        window.location.href = "index.html";
+        window.location.href = "login.html";
     });
 });

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,52 +7,45 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
- 
-    <nav class="navbar">
-        <a class="brand" href="index.html">Stock Predictor</a>
-        <div class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="predict.html">Predict</a>
-        </div>
-        <div class="nav-auth">
-            <a id="authLink" href="login.html" class="active">Login</a>
-        </div>
-    </nav>
- 
+
+    <p><a href="index.html">&larr; Home</a></p>
+
     <div id="Login">
         <h1 id="formTitle">Log In</h1>
- 
+
         <form id="LoginPage">
             <label for="Username">Username</label><br>
             <input type="text" id="Username" name="Username" autocomplete="username"><br>
             <br>
- 
+
             <div id="emailRow" style="display: none;">
                 <label for="Email">Email</label><br>
                 <input type="text" id="Email" name="Email" autocomplete="email"><br>
                 <br>
             </div>
- 
+
             <label for="Password">Password</label><br>
             <input type="password" id="Password" name="Password" autocomplete="current-password"><br>
             <br>
- 
+
+            <p id="message" style="color: green;"></p>
             <p id="error"></p>
             <button type="submit" id="submitBtn">Log in</button>
         </form>
- 
+
         <p>
             <span id="toggleText">Don't have an account?</span>
             <a href="#" id="toggleLink">Create one</a>
         </p>
     </div>
- 
+
     <script src="auth.js"></script>
     <script>
         let mode = "login"; // "login" or "register"
- 
+
         const errorEl = document.getElementById("error");
- 
+        const messageEl = document.getElementById("message");
+
         function setMode(newMode) {
             mode = newMode;
             const isLogin = mode === "login";
@@ -63,23 +55,24 @@
             document.getElementById("toggleLink").textContent = isLogin ? "Create one" : "Log in";
             document.getElementById("emailRow").style.display = isLogin ? "none" : "block";
             errorEl.textContent = "";
+            messageEl.textContent = "";
         }
- 
+
         document.getElementById("toggleLink").addEventListener("click", (e) => {
             e.preventDefault();
             setMode(mode === "login" ? "register" : "login");
         });
- 
+
         async function registerAccount() {
             const username = document.getElementById("Username").value.trim();
             const email    = document.getElementById("Email").value.trim();
             const password = document.getElementById("Password").value;
- 
+
             if (!username || !email || !password) {
                 errorEl.textContent = "Please fill in username, email, and password.";
                 return;
             }
- 
+
             try {
                 const res = await fetch("/register", {
                     method: "POST",
@@ -87,27 +80,30 @@
                     body: JSON.stringify({ username, email, password })
                 });
                 const data = await res.json();
- 
+
                 if (!res.ok) {
                     throw new Error(data.detail || "Registration failed.");
                 }
- 
-                // Backend doesn't log you in on register, so log in right away
-                await loginAccount(username, password);
+
+                // Send them back to the login form to sign in themselves
+                setMode("login");
+                document.getElementById("Password").value = "";
+                document.getElementById("Email").value = "";
+                messageEl.textContent = "Account created! Please log in.";
             } catch (err) {
                 errorEl.textContent = err.message;
             }
         }
- 
-        async function loginAccount(usernameArg, passwordArg) {
-            const username = usernameArg ?? document.getElementById("Username").value.trim();
-            const password = passwordArg ?? document.getElementById("Password").value;
- 
+
+        async function loginAccount() {
+            const username = document.getElementById("Username").value.trim();
+            const password = document.getElementById("Password").value;
+
             if (!username || !password) {
                 errorEl.textContent = "Please enter your username and password.";
                 return;
             }
- 
+
             try {
                 const res = await fetch("/login", {
                     method: "POST",
@@ -115,21 +111,22 @@
                     body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
- 
+
                 if (!res.ok) {
                     throw new Error(data.detail || "Login failed.");
                 }
- 
+
                 setUser({ id: data.id, username: data.username, email: data.email });
-                window.location.href = "predict.html";
+                window.location.href = "index.html"; // back to the home page
             } catch (err) {
                 errorEl.textContent = err.message;
             }
         }
- 
+
         document.getElementById("LoginPage").addEventListener("submit", (e) => {
             e.preventDefault();
             errorEl.textContent = "";
+            messageEl.textContent = "";
             if (mode === "register") {
                 registerAccount();
             } else {
@@ -139,4 +136,3 @@
     </script>
 </body>
 </html>
- 

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Portfolio</title>
+    <link rel="stylesheet" href="index.css">
+    <style>
+        /* index.css limits body to 400px; this page needs room for a grid */
+        body.wide {
+            max-width: 1100px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary {
+            margin: 4px 0 20px;
+            color: var(--muted);
+        }
+
+        .add-row {
+            display: flex;
+            gap: 8px;
+            flex: 1 1 320px;
+            max-width: 420px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px 24px;
+            margin-bottom: 24px;
+        }
+        .horizon {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .seg {
+            display: flex;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .seg button {
+            background: var(--surface-2);
+            color: var(--muted);
+            border: none;
+            border-radius: 0;
+            padding: 7px 12px;
+            font-weight: 500;
+        }
+        .seg button + button { border-left: 1px solid var(--line); }
+        .seg button:hover:not([aria-pressed="true"]) {
+            background: var(--surface);
+            color: var(--ink);
+        }
+        .seg button[aria-pressed="true"] {
+            background: var(--accent);
+            color: var(--bg);
+        }
+        .add-row input[type="text"] {
+            width: auto;
+            flex: 1;
+            padding: 8px;
+            text-transform: uppercase;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .card-head h2 {
+            font-size: 1.05rem;
+            margin: 0;
+        }
+        .ticker {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin: 2px 0 0;
+        }
+        .remove-stock {
+            border: none;
+            background: none;
+            color: var(--muted);
+            font-size: 1.2rem;
+            line-height: 1;
+            padding: 2px 6px;
+        }
+        .remove-stock:hover { color: var(--down); }
+
+        .chart {
+            width: 100%;
+            height: 90px;
+            display: block;
+        }
+        .chart .hist { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+        .chart .proj { fill: none; stroke-width: 2; stroke-dasharray: 4 4; }
+        .chart .dot  { stroke: var(--surface); stroke-width: 2; }
+
+        .prices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+        .delta {
+            font-size: 0.85rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .up   { color: var(--up); }
+        .down { color: var(--down); }
+
+        .shares-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--line);
+            padding-top: 12px;
+        }
+        .stepper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .stepper button {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .stepper button:disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+        .shares-count {
+            min-width: 2ch;
+            text-align: center;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+        .holding-value {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .empty {
+            grid-column: 1 / -1;
+            color: var(--muted);
+            border: 1px dashed var(--line);
+            padding: 32px;
+            text-align: center;
+        }
+
+        /* Side drawer for adding shares */
+        .scrim {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+        .scrim.open { opacity: 1; pointer-events: auto; }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: min(360px, 100vw);
+            box-sizing: border-box;
+            background: var(--surface);
+            border-right: 1px solid var(--line);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transform: translateX(-100%);
+            visibility: hidden;
+            transition: transform 0.22s ease, visibility 0s 0.22s;
+            z-index: 20;
+        }
+        .drawer.open {
+            transform: none;
+            visibility: visible;
+            transition: transform 0.22s ease, visibility 0s;
+        }
+        .drawer-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .drawer-head h2 { margin: 0; font-size: 1.15rem; }
+        .drawer input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .field label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 0.9rem; }
+        .hint { margin: 4px 0 0; font-size: 0.8rem; color: var(--muted); }
+        .drawer-preview {
+            margin: 0;
+            padding-top: 12px;
+            border-top: 1px solid var(--line);
+            font-variant-numeric: tabular-nums;
+        }
+        .drawer-actions { display: flex; gap: 8px; margin-top: auto; }
+        .drawer-actions .primary { flex: 1; }
+        #drawerError { margin: 0; min-height: 1.2em; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .scrim, .drawer, .drawer.open { transition: none; }
+        }
+
+        /* Secondary buttons: the page's main action stays blue */
+        .stepper button, #drawerCancel {
+            background: var(--surface-2);
+            color: var(--ink);
+            border: 1px solid var(--line);
+        }
+        .stepper button:hover:not(:disabled), #drawerCancel:hover {
+            background: var(--surface-2);
+            border-color: var(--accent);
+        }
+
+        button:focus-visible, input:focus-visible {
+            outline: 2px solid var(--ink);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="wide">
+
+    <div class="topbar">
+        <a href="index.html">&larr; Home</a>
+        <a id="authLink" href="login.html">Login</a>
+    </div>
+
+    <h1>My Portfolio</h1>
+    <p class="summary" id="summary"></p>
+
+    <div class="toolbar">
+        <div class="add-row" id="addForm">
+            <input type="text" id="newTicker" placeholder="Ticker, e.g. AAPL" aria-label="Ticker to add" maxlength="10">
+            <button type="button" id="addBtn">Add stock</button>
+        </div>
+
+        <div class="horizon" role="group" aria-label="Prediction horizon">
+            <span class="label">Predict</span>
+            <div class="seg" id="horizonSeg"></div>
+        </div>
+    </div>
+    <p id="error"></p>
+
+    <div id="grid"></div>
+
+    <div class="scrim" id="scrim"></div>
+    <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+        <div class="drawer-head">
+            <div>
+                <h2 id="drawerTitle">Add shares</h2>
+                <p class="ticker" id="drawerSub"></p>
+            </div>
+            <button type="button" class="remove-stock" id="drawerClose" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="field">
+            <label for="drawerShares">Shares</label>
+            <input type="number" id="drawerShares" min="0" step="any" value="1">
+        </div>
+
+        <div class="field">
+            <label for="drawerPrice">Price per share (optional)</label>
+            <input type="number" id="drawerPrice" min="0" step="any">
+            <p class="hint">Leave blank to use the current price.</p>
+        </div>
+
+        <p class="drawer-preview" id="drawerPreview"></p>
+        <p id="drawerError"></p>
+
+        <div class="drawer-actions">
+            <button type="button" id="drawerCancel">Cancel</button>
+            <button type="button" class="primary" id="drawerConfirm">Add shares</button>
+        </div>
+    </aside>
+
+    <script src="auth.js"></script>
+    <script>
+        // ---------------------------------------------------------------
+        // PROTOTYPE SWITCH
+        // true  = fake data, works by just opening the file in a browser
+        // false = talks to your FastAPI backend (see the notes in the chat)
+        // ---------------------------------------------------------------
+        const USE_MOCK = true;
+
+        // Mock data
+        const MOCK_NAMES = {
+            AAPL: "Apple Inc.",
+            MSFT: "Microsoft Corp.",
+            TSLA: "Tesla, Inc.",
+            NVDA: "NVIDIA Corp.",
+            AMZN: "Amazon.com, Inc.",
+            GOOGL: "Alphabet Inc."
+        };
+
+        let holdings = [
+            { ticker: "AAPL", shares: 12 },
+            { ticker: "MSFT", shares: 5 },
+            { ticker: "TSLA", shares: 3 },
+            { ticker: "NVDA", shares: 8 }
+        ];
+
+        // Cache so each card keeps the same chart between re-renders
+        const marketCache = {};
+
+        // Same ticker always gives the same fake series
+        function seededRandom(seed) {
+            let s = 0;
+            for (const ch of seed) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+            return () => {
+                s = (s * 1664525 + 1013904223) >>> 0;
+                return s / 4294967296;
+            };
+        }
+
+        // Prediction horizons. Each maps to the interval + horizon your /predict route expects.
+        // "spread" only controls how far the fake mock predictions can swing.
+        const HORIZONS = {
+            "1d": { label: "1 day",    interval: "daily",   horizon: 1, spread: 0.04 },
+            "1w": { label: "1 week",   interval: "weekly",  horizon: 1, spread: 0.08 },
+            "1m": { label: "1 month",  interval: "monthly", horizon: 1, spread: 0.16 },
+            "3m": { label: "3 months", interval: "monthly", horizon: 3, spread: 0.26 }
+        };
+
+        let currentHorizon = "1d";
+        try {
+            const saved = localStorage.getItem("horizon");
+            if (HORIZONS[saved]) currentHorizon = saved;
+        } catch {}
+
+        function mockMarket(ticker) {
+            const rand = seededRandom(ticker);
+            let price = 40 + rand() * 300;
+            const history = [];
+            for (let i = 0; i < 30; i++) {
+                price *= 1 + (rand() - 0.48) * 0.04;
+                history.push(price);
+            }
+            return { history, current: history[history.length - 1], predictions: {} };
+        }
+
+        // Same ticker + horizon always gives the same fake prediction
+        function mockPrediction(ticker, key, current) {
+            const rand = seededRandom(ticker + key);
+            return current * (1 + (rand() - 0.5) * HORIZONS[key].spread);
+        }
+
+        async function fetchPredict(ticker, key) {
+            const h = HORIZONS[key];
+            const res = await fetch(`/predict?ticker=${ticker}&interval=${h.interval}&horizon=${h.horizon}`);
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(typeof data.detail === "string" ? data.detail : `Could not load ${ticker}`);
+            }
+            return data;
+        }
+
+        // Data layer: swap these for real calls.
+        // Returns the stock's market data with `predicted` set for the selected horizon.
+        async function getMarket(ticker) {
+            const key = currentHorizon;
+            let market = marketCache[ticker];
+
+            if (USE_MOCK) {
+                market = market || mockMarket(ticker);
+                if (market.predictions[key] === undefined) {
+                    market.predictions[key] = mockPrediction(ticker, key, market.current);
+                }
+            } else {
+                if (!market) {
+                    // Daily data gives the freshest "current price"
+                    const base = await fetchPredict(ticker, "1d");
+                    const real = Array.isArray(base.history) && base.history.length > 1;
+                    market = {
+                        // Placeholder line until /predict returns `history`
+                        history: real ? base.history : mockMarket(ticker).history.map((p, i, arr) =>
+                            p * (base.current_price / arr[arr.length - 1])),
+                        current: base.current_price,
+                        predictions: { "1d": base.predicted_price }
+                    };
+                }
+                if (market.predictions[key] === undefined) {
+                    const d = await fetchPredict(ticker, key);
+                    // Weekly/monthly runs start from an older bar, so use the predicted
+                    // % move and apply it to the latest daily price instead.
+                    market.predictions[key] = market.current * (d.predicted_price / d.current_price);
+                }
+            }
+
+            marketCache[ticker] = market;
+            market.predicted = market.predictions[key];
+            return market;
+        }
+
+        async function loadHoldings() {
+            if (USE_MOCK) return;
+            const user = getUser();
+            if (!user) { window.location.href = "login.html"; return; }
+            const res = await fetch(`/portfolio/${user.id}`);
+            holdings = await res.json();
+        }
+
+        async function saveShares(ticker, shares) {
+            if (USE_MOCK) return;
+            const user = getUser();
+            // Needs a new PUT route in portfolio.py
+            const res = await fetch(`/portfolio/${user.id}/${ticker}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ shares })
+            });
+            if (!res.ok) throw new Error("Could not update shares.");
+        }
+
+        async function saveNewStock(ticker) {
+            if (USE_MOCK) return;
+            const user = getUser();
+            const res = await fetch("/portfolio", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: user.id, ticker, shares: 1 })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Could not add stock.");
+        }
+
+        async function deleteStock(ticker) {
+            if (USE_MOCK) return;
+            const user = getUser();
+            const res = await fetch(`/portfolio/${user.id}/${ticker}`, { method: "DELETE" });
+            if (!res.ok) throw new Error("Could not remove stock.");
+        }
+
+        // Rendering
+        const grid = document.getElementById("grid");
+        const errorEl = document.getElementById("error");
+
+        const money = n => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        function chartSVG(history, predicted, color) {
+            const W = 280, H = 90, pad = 6;
+            const all = [...history, predicted];
+            const min = Math.min(...all), max = Math.max(...all);
+            const span = max - min || 1;
+            const n = all.length;
+            const x = i => pad + (i / (n - 1)) * (W - pad * 2);
+            const y = v => H - pad - ((v - min) / span) * (H - pad * 2);
+
+            const hist = history.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+            const lastX = x(history.length - 1), lastY = y(history[history.length - 1]);
+            const predX = x(n - 1), predY = y(predicted);
+
+            return `
+                <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+                     aria-label="Price history with predicted next price">
+                    <polyline class="hist" points="${hist}" stroke="var(--chart)" vector-effect="non-scaling-stroke"/>
+                    <line class="proj" x1="${lastX}" y1="${lastY}" x2="${predX}" y2="${predY}"
+                          stroke="${color}" vector-effect="non-scaling-stroke"/>
+                    <circle class="dot" cx="${predX}" cy="${predY}" r="5" fill="${color}"/>
+                </svg>`;
+        }
+
+        function cardHTML(h, m) {
+            const diff = m.predicted - m.current;
+            const pct = (diff / m.current) * 100;
+            const dir = diff >= 0 ? "up" : "down";
+            const color = diff >= 0 ? "var(--up)" : "var(--down)";
+            const sign = diff >= 0 ? "+" : "-";
+            const name = MOCK_NAMES[h.ticker] || h.ticker;
+
+            return `
+                <article class="card" data-ticker="${h.ticker}">
+                    <div class="card-head">
+                        <div>
+                            <h2>${name}</h2>
+                            <p class="ticker">${h.ticker}</p>
+                        </div>
+                        <button type="button" class="remove-stock" data-action="remove"
+                                aria-label="Remove ${h.ticker} from portfolio" title="Remove stock">&times;</button>
+                    </div>
+
+                    ${chartSVG(m.history, m.predicted, color)}
+
+                    <div class="prices">
+                        <div>
+                            <span class="label">Current price</span>
+                            <span class="value">${money(m.current)}</span>
+                        </div>
+                        <div>
+                            <span class="label">Predicted (${HORIZONS[currentHorizon].label})</span>
+                            <span class="value ${dir}">${money(m.predicted)}</span>
+                            <span class="delta ${dir}">${sign}${Math.abs(pct).toFixed(2)}%</span>
+                        </div>
+                    </div>
+
+                    <div class="shares-row">
+                        <div class="stepper">
+                            <button type="button" data-action="minus" aria-label="Remove one share of ${h.ticker}"
+                                    ${h.shares <= 0 ? "disabled" : ""}>&minus;</button>
+                            <span class="shares-count" aria-live="polite">${h.shares}</span>
+                            <button type="button" data-action="plus" aria-label="Add one share of ${h.ticker}">+</button>
+                            <span class="label">shares</span>
+                        </div>
+                        <div class="holding-value">
+                            <span class="label">Position value</span>
+                            <strong>${money(m.current * h.shares)}</strong>
+                            <span class="label">Avg cost ${money(h.cost)}</span>
+                        </div>
+                    </div>
+                </article>`;
+        }
+
+        async function render() {
+            if (holdings.length === 0) {
+                grid.innerHTML = `<div class="empty">No stocks yet. Enter a ticker above to add your first one.</div>`;
+                document.getElementById("summary").textContent = "";
+                return;
+            }
+
+            const markets = await Promise.all(holdings.map(h => getMarket(h.ticker).catch(() => null)));
+            let total = 0, totalPred = 0;
+            grid.innerHTML = holdings.map((h, i) => {
+                const m = markets[i];
+                if (!m) {
+                    return `<article class="card"><h2>${h.ticker}</h2><p class="down">Could not load prices.</p></article>`;
+                }
+                if (h.cost == null) {
+                    // Mock only: pretend these were bought at slightly different prices
+                    h.cost = USE_MOCK ? m.current * (0.85 + seededRandom(h.ticker + "cost")() * 0.3) : m.current;
+                }
+                total += m.current * h.shares;
+                totalPred += m.predicted * h.shares;
+                return cardHTML(h, m);
+            }).join("");
+
+            document.getElementById("summary").textContent =
+                `${holdings.length} stock${holdings.length === 1 ? "" : "s"} \u00b7 total value ${money(total)}, predicted ${money(totalPred)} in ${HORIZONS[currentHorizon].label}`;
+        }
+
+        // Events
+        grid.addEventListener("click", async (e) => {
+            const btn = e.target.closest("button[data-action]");
+            if (!btn) return;
+            const ticker = btn.closest(".card").dataset.ticker;
+            const h = holdings.find(x => x.ticker === ticker);
+            errorEl.textContent = "";
+
+            try {
+                if (btn.dataset.action === "plus") {
+                    openDrawer(ticker);
+                    return;
+                } else if (btn.dataset.action === "minus" && h.shares > 0) {
+                    await saveShares(ticker, h.shares - 1);
+                    h.shares -= 1;
+                } else if (btn.dataset.action === "remove") {
+                    await deleteStock(ticker);
+                    holdings = holdings.filter(x => x.ticker !== ticker);
+                }
+                render();
+            } catch (err) {
+                errorEl.textContent = err.message;
+            }
+        });
+
+        document.getElementById("addBtn").addEventListener("click", addStock);
+        document.getElementById("newTicker").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") addStock();
+        });
+
+        async function addStock() {
+            errorEl.textContent = "";
+            const input = document.getElementById("newTicker");
+            const ticker = input.value.trim().toUpperCase();
+            if (!ticker) { errorEl.textContent = "Please enter a ticker symbol."; return; }
+            if (holdings.some(h => h.ticker === ticker)) {
+                errorEl.textContent = `${ticker} is already in your portfolio.`;
+                return;
+            }
+
+            try {
+                const m = await getMarket(ticker); // makes sure the ticker is real
+                await saveNewStock(ticker);
+                holdings.push({ ticker, shares: 1, cost: m.current });
+                input.value = "";
+                render();
+            } catch (err) {
+                errorEl.textContent = err.message;
+            }
+        }
+
+        // Add-shares drawer
+        const drawer = document.getElementById("drawer");
+        const scrim = document.getElementById("scrim");
+        const sharesInput = document.getElementById("drawerShares");
+        const priceInput = document.getElementById("drawerPrice");
+        const drawerError = document.getElementById("drawerError");
+        let drawerTicker = null;
+
+        function drawerPrice(m) {
+            // blank = current price
+            const raw = priceInput.value.trim();
+            return raw === "" ? m.current : Number(raw);
+        }
+
+        function updatePreview() {
+            const h = holdings.find(x => x.ticker === drawerTicker);
+            const m = marketCache[drawerTicker];
+            const n = Number(sharesInput.value);
+            const p = drawerPrice(m);
+            const preview = document.getElementById("drawerPreview");
+            if (!h || !(n > 0) || !(p > 0)) { preview.textContent = ""; return; }
+            const total = h.shares + n;
+            const avg = (h.shares * h.cost + n * p) / total;
+            preview.textContent = `New total: ${total} shares at an average of ${money(avg)}`;
+        }
+
+        async function openDrawer(ticker) {
+            const m = await getMarket(ticker);
+            drawerTicker = ticker;
+            document.getElementById("drawerSub").textContent = (MOCK_NAMES[ticker] || ticker) + " (" + ticker + ")";
+            sharesInput.value = 1;
+            priceInput.value = "";
+            priceInput.placeholder = "Current price " + money(m.current);
+            drawerError.textContent = "";
+            updatePreview();
+            drawer.classList.add("open");
+            scrim.classList.add("open");
+            drawer.setAttribute("aria-hidden", "false");
+            sharesInput.focus();
+            sharesInput.select();
+        }
+
+        function closeDrawer() {
+            const ticker = drawerTicker;
+            drawerTicker = null;
+            drawer.classList.remove("open");
+            scrim.classList.remove("open");
+            drawer.setAttribute("aria-hidden", "true");
+            // Return focus to the + button that opened the drawer
+            const plus = grid.querySelector(`.card[data-ticker="${ticker}"] [data-action="plus"]`);
+            if (plus) plus.focus();
+        }
+
+        async function confirmAdd() {
+            const h = holdings.find(x => x.ticker === drawerTicker);
+            const m = marketCache[drawerTicker];
+            const n = Number(sharesInput.value);
+            const p = drawerPrice(m);
+
+            if (!(n > 0)) { drawerError.textContent = "Enter how many shares to add."; return; }
+            if (!(p > 0)) { drawerError.textContent = "Enter a price above 0, or leave it blank."; return; }
+
+            const newTotal = h.shares + n;
+            const newCost = (h.shares * h.cost + n * p) / newTotal;
+            try {
+                await saveShares(h.ticker, newTotal, newCost);
+                h.shares = newTotal;
+                h.cost = newCost;
+                closeDrawer();
+                render();
+            } catch (err) {
+                drawerError.textContent = err.message;
+            }
+        }
+
+        document.getElementById("drawerConfirm").addEventListener("click", confirmAdd);
+        document.getElementById("drawerCancel").addEventListener("click", closeDrawer);
+        document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+        scrim.addEventListener("click", closeDrawer);
+        sharesInput.addEventListener("input", updatePreview);
+        priceInput.addEventListener("input", updatePreview);
+        drawer.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") confirmAdd(); });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && drawer.classList.contains("open")) closeDrawer();
+        });
+
+        // Horizon picker
+        const seg = document.getElementById("horizonSeg");
+        seg.innerHTML = Object.entries(HORIZONS).map(([key, h]) =>
+            `<button type="button" data-horizon="${key}" aria-pressed="${key === currentHorizon}">${h.label}</button>`
+        ).join("");
+
+        seg.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-horizon]");
+            if (!btn || btn.dataset.horizon === currentHorizon) return;
+            currentHorizon = btn.dataset.horizon;
+            try { localStorage.setItem("horizon", currentHorizon); } catch {}
+            seg.querySelectorAll("button").forEach(b =>
+                b.setAttribute("aria-pressed", String(b.dataset.horizon === currentHorizon)));
+            errorEl.textContent = "";
+            render();
+        });
+
+        (async () => {
+            await loadHoldings();
+            render();
+        })();
+    </script>
+</body>
+</html>

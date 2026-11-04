@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Information</title>
     <link rel="stylesheet" href="index.css">
 </head>
-<body>
+<body class="model">
 
     <p><a href="index.html">&larr; Home</a></p>
 
@@ -13,8 +14,7 @@
 
     <form id="myForm">
         <label for="Symbol">Ticker Symbol</label><br>
-        <input type="text" id="Symbol" name="Symbol"><br>
-        <br>
+        <input type="text" id="Symbol" name="Symbol">
 
         <label for="Interval">Interval</label><br>
         <select id="Interval" name="Interval">
@@ -22,34 +22,30 @@
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
-        </select><br>
-        <br>
+        </select>
 
         <label for="Horizon">Horizon</label><br>
-        <input type="text" id="Horizon" name="Horizon"><br>
-        <br>
+        <input type="text" id="Horizon" name="Horizon">
 
         <label for="StartDate">Start Date</label><br>
-        <input type="text" id="StartDate" name="StartDate"><br>
-        <br>
+        <input type="text" id="StartDate" name="StartDate">
 
         <label for="EndDate">End Date</label><br>
-        <input type="text" id="EndDate" name="EndDate"><br>
-        <br>
-        <p id="error"></p>
+        <input type="text" id="EndDate" name="EndDate">
 
-        <h2>Results</h2>
-        <div id="result" style="display: none;">
-            <p>Ticker: <span id="resTicker"></span></p>
-            <p>Interval: <span id="resInterval"></span></p>
-            <p>Horizon: <span id="resHorizon"></span></p>
-            <p>Current price: <span id="resCurrent"></span></p>
-            <p>Predicted price: <span id="resPredicted"></span></p>
-            <p>Data points used: <span id="resPoints"></span></p>
-        </div>
-        <br>
+        <p id="error"></p>
         <button type="button" onclick="showInputs()">Submit</button>
     </form>
+
+    <div id="result" style="display: none;">
+        <h2>Results</h2>
+        <p>Ticker: <span id="resTicker"></span></p>
+        <p>Interval: <span id="resInterval"></span></p>
+        <p>Horizon: <span id="resHorizon"></span></p>
+        <p>Current price: <span id="resCurrent"></span></p>
+        <p>Predicted price: <span id="resPredicted"></span></p>
+        <p>Data points used: <span id="resPoints"></span></p>
+    </div>
 
     <script>
         async function showInputs() {

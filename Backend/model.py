@@ -51,6 +51,10 @@ def css():
 def auth_js():
     return FileResponse(BASE_DIR / "auth.js", media_type="text/javascript")
 
+@app.get("/portfolio.html", include_in_schema=False)
+def portfolio_page():
+    return FileResponse(BASE_DIR / "portfolio.html")
+
 
 def fetch_data(ticker, start=None, end=None):
     df = yf.download(ticker, period="max", progress=False)

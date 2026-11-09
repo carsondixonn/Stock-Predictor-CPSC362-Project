@@ -47,7 +47,10 @@
         <p>Data points used: <span id="resPoints"></span></p>
     </div>
 
+    <script src="ticker-search.js"></script>
     <script>
+        attachTickerSearch(document.getElementById("Symbol"));
+
         async function showInputs() {
             const ticker  = document.getElementById("Symbol").value.trim(); //finds box and creates object
             const interval = document.getElementById("Interval").value;

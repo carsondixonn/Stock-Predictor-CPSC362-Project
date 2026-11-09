@@ -124,3 +124,41 @@ button:disabled {
 dialog::backdrop {
     background: rgba(0, 0, 0, 0.5);
 }
+
+/* Ticker autocomplete dropdown (ticker-search.js) */
+.ts-list {
+    position: absolute;
+    z-index: 30;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    box-sizing: border-box;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.ts-list[hidden] { display: none; }
+.ts-list li {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.ts-list li strong { min-width: 4.5ch; font-weight: 600; }
+.ts-list li span {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ts-list li:hover,
+.ts-list li[aria-selected="true"] { background: var(--surface-2); }
+.ts-list li[aria-selected="true"] span { color: var(--ink); }
+.ts-list li.ts-empty { color: var(--muted); cursor: default; }
+.ts-list li.ts-empty:hover { background: none; }

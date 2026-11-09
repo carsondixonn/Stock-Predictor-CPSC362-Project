@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlmodel import SQLModel, Field, Session, create_engine
 
 
@@ -19,6 +20,9 @@ class Portfolio(SQLModel, table=True):
     ticker: str
     shares: float = 0
 
+    # Average price paid per share (None until the user records one)
+    cost: float | None = None
+
 
 # Database connection
 database_file = "stocks.db"
@@ -35,6 +39,13 @@ engine = create_engine(
 # Create tables
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
+
+    # create_all never alters an existing table, so a stocks.db made before the
+    # "cost" column existed gets it added here (existing rows keep cost = NULL).
+    with engine.begin() as conn:
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(portfolio)"))]
+        if "cost" not in columns:
+            conn.execute(text("ALTER TABLE portfolio ADD COLUMN cost FLOAT"))
 
 
 # Database session

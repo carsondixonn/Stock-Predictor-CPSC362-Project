@@ -29,6 +29,14 @@
             max-width: 420px;
         }
 
+        .live {
+            margin: -12px 0 20px;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .live .dot-live { color: var(--up); }
+        .live .dot-closed { color: var(--muted); }
+
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -178,6 +186,16 @@
             font-variant-numeric: tabular-nums;
         }
 
+        /* Faint tint when a live price update changes a card (green up, red down) */
+        @keyframes card-flash {
+            from { background-color: var(--flash); }
+            to   { background-color: var(--surface); }
+        }
+        .card.flash { animation: card-flash 1.6s ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+            .card.flash { animation: none; }
+        }
+
         .empty {
             grid-column: 1 / -1;
             color: var(--muted);
@@ -275,6 +293,7 @@
 
     <h1>My Portfolio</h1>
     <p class="summary" id="summary"></p>
+    <p class="live" id="liveStatus" aria-live="off"></p>
 
     <div class="toolbar">
         <div class="add-row" id="addForm">
@@ -322,13 +341,14 @@
     </aside>
 
     <script src="auth.js"></script>
+    <script src="ticker-search.js"></script>
     <script>
         // ---------------------------------------------------------------
         // PROTOTYPE SWITCH
         // true  = fake data, works by just opening the file in a browser
         // false = talks to your FastAPI backend (see the notes in the chat)
         // ---------------------------------------------------------------
-        const USE_MOCK = true;
+        const USE_MOCK = false;
 
         // Mock data
         const MOCK_NAMES = {
@@ -410,8 +430,9 @@
 
             if (USE_MOCK) {
                 market = market || mockMarket(ticker);
+                market.anchor = market.anchor || market.current;
                 if (market.predictions[key] === undefined) {
-                    market.predictions[key] = mockPrediction(ticker, key, market.current);
+                    market.predictions[key] = mockPrediction(ticker, key, market.anchor);
                 }
             } else {
                 if (!market) {
@@ -423,6 +444,7 @@
                         history: real ? base.history : mockMarket(ticker).history.map((p, i, arr) =>
                             p * (base.current_price / arr[arr.length - 1])),
                         current: base.current_price,
+                        anchor: base.current_price,
                         predictions: { "1d": base.predicted_price }
                     };
                 }
@@ -430,12 +452,14 @@
                     const d = await fetchPredict(ticker, key);
                     // Weekly/monthly runs start from an older bar, so use the predicted
                     // % move and apply it to the latest daily price instead.
-                    market.predictions[key] = market.current * (d.predicted_price / d.current_price);
+                    market.predictions[key] = market.anchor * (d.predicted_price / d.current_price);
                 }
             }
 
             marketCache[ticker] = market;
-            market.predicted = market.predictions[key];
+            // Predictions were made from `anchor`; keep the same predicted % move
+            // when the live price drifts away from it.
+            market.predicted = market.predictions[key] * (market.current / market.anchor);
             return market;
         }
 
@@ -444,28 +468,34 @@
             const user = getUser();
             if (!user) { window.location.href = "login.html"; return; }
             const res = await fetch(`/portfolio/${user.id}`);
+            if (!res.ok) throw new Error("Could not load your portfolio.");
             holdings = await res.json();
         }
 
-        async function saveShares(ticker, shares) {
+        // Saves the share count (and the average cost, when it changed) for one holding
+        async function saveShares(ticker, shares, cost) {
             if (USE_MOCK) return;
             const user = getUser();
-            // Needs a new PUT route in portfolio.py
+            const body = { shares };
+            if (cost != null) body.cost = cost;
             const res = await fetch(`/portfolio/${user.id}/${ticker}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ shares })
+                body: JSON.stringify(body)
             });
-            if (!res.ok) throw new Error("Could not update shares.");
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(typeof data.detail === "string" ? data.detail : "Could not update shares.");
+            }
         }
 
-        async function saveNewStock(ticker) {
+        async function saveNewStock(ticker, cost) {
             if (USE_MOCK) return;
             const user = getUser();
             const res = await fetch("/portfolio", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: user.id, ticker, shares: 1 })
+                body: JSON.stringify({ user_id: user.id, ticker, shares: 1, cost })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || "Could not add stock.");
@@ -609,6 +639,7 @@
             }
         });
 
+        attachTickerSearch(document.getElementById("newTicker"));
         document.getElementById("addBtn").addEventListener("click", addStock);
         document.getElementById("newTicker").addEventListener("keydown", (e) => {
             if (e.key === "Enter") addStock();
@@ -626,7 +657,7 @@
 
             try {
                 const m = await getMarket(ticker); // makes sure the ticker is real
-                await saveNewStock(ticker);
+                await saveNewStock(ticker, m.current);
                 holdings.push({ ticker, shares: 1, cost: m.current });
                 input.value = "";
                 render();
@@ -727,20 +758,117 @@
             `<button type="button" data-horizon="${key}" aria-pressed="${key === currentHorizon}">${h.label}</button>`
         ).join("");
 
-        seg.addEventListener("click", (e) => {
+        seg.addEventListener("click", async (e) => {
             const btn = e.target.closest("button[data-horizon]");
             if (!btn || btn.dataset.horizon === currentHorizon) return;
+            // Remember what each card was predicting so we can flash the difference
+            const oldPredicted = {};
+            for (const [t, m] of Object.entries(marketCache)) oldPredicted[t] = m.predicted;
             currentHorizon = btn.dataset.horizon;
             try { localStorage.setItem("horizon", currentHorizon); } catch {}
             seg.querySelectorAll("button").forEach(b =>
                 b.setAttribute("aria-pressed", String(b.dataset.horizon === currentHorizon)));
             errorEl.textContent = "";
-            render();
+            await render();
+
+            // Green if the new horizon predicts a higher price than the old one, red if lower
+            const moves = {};
+            for (const h of holdings) {
+                const m = marketCache[h.ticker];
+                const before = oldPredicted[h.ticker];
+                if (m && before && m.predicted !== before) moves[h.ticker] = (m.predicted - before) / before * 100;
+            }
+            flashCards(moves, 2);
         });
 
+        // ---------------------------------------------------------------
+        // Live prices: poll /quote and update the current price + chart end
+        // ---------------------------------------------------------------
+        const POLL_MS = 30000;
+        const liveStatus = document.getElementById("liveStatus");
+
+        async function fetchQuotes(tickers) {
+            if (USE_MOCK) {
+                // Random-walk the fake prices so you can see the page move
+                const quotes = {};
+                for (const t of tickers) {
+                    const m = marketCache[t];
+                    if (m) quotes[t] = m.current * (1 + (Math.random() - 0.5) * 0.004);
+                }
+                return { market_open: true, quotes };
+            }
+            const res = await fetch(`/quote?tickers=${encodeURIComponent(tickers.join(","))}`);
+            if (!res.ok) throw new Error("quote request failed");
+            return res.json();
+        }
+
+        function applyQuote(ticker, price) {
+            const m = marketCache[ticker];
+            if (!m || !(price > 0)) return;
+            m.current = price;
+            // First live tick adds a new point after the last finished bar;
+            // later ticks just move that point.
+            if (m.liveAdded) m.history[m.history.length - 1] = price;
+            else { m.history.push(price); m.liveAdded = true; }
+        }
+
+        // Bigger moves get a slightly stronger tint, but it always stays subtle (6%-18% opacity).
+        // `fullAt` is the % move that gets the strongest tint (live ticks are small, horizon changes big).
+        function flashCards(moves, fullAt = 0.2) {
+            for (const [ticker, pct] of Object.entries(moves)) {
+                const card = grid.querySelector(`.card[data-ticker="${ticker}"]`);
+                if (!card) continue;
+                const strength = Math.min(Math.abs(pct) / fullAt, 1);
+                const alpha = (0.06 + strength * 0.12).toFixed(3);
+                card.style.setProperty("--flash",
+                    pct > 0 ? `rgba(61, 220, 151, ${alpha})` : `rgba(255, 107, 120, ${alpha})`);
+                card.classList.add("flash");
+            }
+        }
+
+        async function pollQuotes() {
+            if (document.hidden || holdings.length === 0 || drawer.classList.contains("open")) return;
+            try {
+                const { market_open, quotes } = await fetchQuotes(holdings.map(h => h.ticker));
+                const moves = {};   // ticker -> % change since the last update
+                for (const [t, p] of Object.entries(quotes)) {
+                    const before = marketCache[t] && marketCache[t].current;
+                    applyQuote(t, p);
+                    if (before && p !== before) moves[t] = (p - before) / before * 100;
+                }
+
+                // render() rebuilds the cards, so put keyboard focus back afterwards
+                const a = document.activeElement;
+                const card = a && a.closest ? a.closest(".card") : null;
+                const focusKey = card && a.dataset.action ? [card.dataset.ticker, a.dataset.action] : null;
+                await render();
+                if (focusKey) {
+                    const el = grid.querySelector(`.card[data-ticker="${focusKey[0]}"] [data-action="${focusKey[1]}"]`);
+                    if (el) el.focus();
+                }
+
+                flashCards(moves);
+
+                const time = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+                liveStatus.innerHTML = market_open
+                    ? `<span class="dot-live">\u25CF</span> Live \u00b7 updated ${time} \u00b7 prices may be delayed ~15 min`
+                    : `<span class="dot-closed">\u25CF</span> Market closed \u00b7 showing last price (${time})`;
+            } catch {
+                liveStatus.textContent = "Live prices unavailable right now.";
+            }
+        }
+
         (async () => {
-            await loadHoldings();
-            render();
+            try {
+                await loadHoldings();
+            } catch (err) {
+                errorEl.textContent = err.message;
+                return;
+            }
+            await render();
+            pollQuotes();                         // first live price right away
+            setInterval(pollQuotes, POLL_MS);
+            document.addEventListener("visibilitychange", () => { if (!document.hidden) pollQuotes(); });
         })();
     </script>
 </body>
